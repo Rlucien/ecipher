@@ -1,21 +1,40 @@
-use axum::{
-    routing::post,
-    Router,
-    Json,
-};
-use shared::{HelloRequest, HelloResponse};
+use axum::{routing::post, Router, Json};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use shared::{KeyRequest, KeyResponse};
 use std::net::SocketAddr;
 
-async fn hello(req: Json<HelloRequest>) -> Json<HelloResponse> {
-    let message = format!("Hello, {}! (from server)", req.name);
-    Json(HelloResponse { message })
+type KeyStore = Arc<Mutex<HashMap<String, Vec<u8>>>>;
+
+async fn store_key(
+    store: axum::extract::Extension<KeyStore>,
+    Json(req): Json<KeyRequest>,
+) -> Json<KeyResponse> {
+    let mut store = store.lock().unwrap();
+    // 生产环境应校验权限
+    let key = rand::random::<[u8; 32]>().to_vec();
+    store.insert(req.key_id.clone(), key.clone());
+    Json(KeyResponse { key })
+}
+
+async fn get_key(
+    store: axum::extract::Extension<KeyStore>,
+    Json(req): Json<KeyRequest>,
+) -> Json<KeyResponse> {
+    let store = store.lock().unwrap();
+    let key = store.get(&req.key_id).cloned().unwrap_or_default();
+    Json(KeyResponse { key })
 }
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/hello", post(hello));
+    let store: KeyStore = Arc::new(Mutex::new(HashMap::new()));
+    let app = Router::new()
+        .route("/store_key", post(store_key))
+        .route("/get_key", post(get_key))
+        .layer(axum::extract::Extension(store));
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
-    println!("Server running on {}", addr);
+    println!("Server listening on {}", addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
