@@ -1,0 +1,233 @@
+
+import { Button, GroupBox, LineEdit, ComboBox, HorizontalBox, VerticalBox } from "std-widgets.slint";
+
+
+export component HomePage inherits Rectangle
+{
+    in property <bool> modeCheck-enabled: true;
+    in property <length> leftblock-length: 40px;
+    in property <length> rightblock-length: 40px;
+
+    // home界面的input和output
+    in-out property<int> mode-input: 0;
+    in-out property<string> aesplain-input: 0;
+    in-out property<string> aesiv-input;
+    in-out property<string> aeskey-input;
+    in-out property<string> aescipher-input;
+
+    // feedback 函数
+    callback handle_encrypt();
+
+    
+
+    Rectangle {
+        x: 0px;
+        y: 0px;
+        width: parent.width;
+        height: parent.height;
+        //background: blue;
+
+        settingGroup := GroupBox {
+            x: leftblock-length;
+            y: 0px;
+            width: parent.width - leftblock-length - rightblock-length;
+            height: 60px;
+
+            title: @tr("AES Settings");
+
+            HorizontalBox{
+                width: parent.width;
+                height: parent.height;
+                padding: 20px;
+                spacing: 20px;
+
+                Text {
+                    text: @tr("Mode:"); 
+                    width: 50px;
+                    height: 40px;
+                    vertical-alignment: center;
+                    horizontal-alignment: right;
+                }
+                modeCheck := ComboBox {
+                    model: [@tr("AES-CBC"), @tr("AES-ECB"), @tr("AES-OFB"), @tr("AES-OFB"), @tr("AES-CFB"), @tr("AES-CTR")];
+                    enabled: modeCheck-enabled;
+                    // min-width: 200px;
+                    // min-height: 30px;
+                    width: 110px;
+                    height: 40px;
+                }
+
+                Text {
+                    text: @tr("Padding:"); 
+                    width: 60px;
+                    height: 40px;
+                    vertical-alignment: center;
+                    horizontal-alignment: right;
+                }
+                paddingCheck := ComboBox {
+                    model: [@tr("None"), @tr("Zero"), @tr("PKCS7"), @tr("ANSIX923"), @tr("ISO10126")];
+                    enabled: modeCheck-enabled;
+                    // min-width: 200px;
+                    // min-height: 30px;
+                    width: 120px;
+                    height: 40px;
+                }
+
+                Text {
+                    text: @tr("Lenght:");
+                    width: 60px;
+                    height: 40px;
+                    vertical-alignment: center;
+                    horizontal-alignment: right;
+                }
+                LenCheck := ComboBox {
+                    model: [@tr("AES-128"), @tr("AES-192"), @tr("AES-256")];
+                    enabled: modeCheck-enabled;
+                    // min-width: 200px;
+                    // min-height: 30px;
+                    width: 110px;
+                    height: 40px;
+                }
+            }
+        }
+
+        inputGroup := GroupBox {
+            title: @tr("AES Input");
+            x: settingGroup.x;
+            y: settingGroup.y + settingGroup.height + 60px;
+
+            width: parent.width - leftblock-length - rightblock-length;
+            height: 240px;
+
+            GridLayout {
+                width: parent.width;
+                height: parent.height;
+
+                padding: 20px;
+                spacing: 20px;
+
+                Row {
+                    Text {
+                        text: @tr("Plaintext:");
+                        vertical-alignment: center;
+                        //horizontal-alignment: center;
+                        horizontal-alignment: right;
+                        width: 40px;
+                    }
+                    dataInput := LineEdit {
+                        text: root.aesplain-input;
+                        placeholder-text: @tr("Please input plain text as hex");
+                        font-size: 14px;
+                        // min-width: 200px;
+                        // min-height: 30px;
+                        width: inputGroup.width - 40px - 20px -20px - 20px;
+                        height: 40px;
+                    }
+                }
+
+                Row {
+                    Text {
+                        text: @tr("IV:");
+                        vertical-alignment: center;
+                        //horizontal-alignment: center;
+                        horizontal-alignment: right;
+                        width: 40px;
+                    }
+                    ivInput := LineEdit {
+                        text: root.aesiv-input;
+                        placeholder-text: @tr("Please input IV text as hex");
+                        font-size: 14px;
+                        // min-width: 200px;
+                        // min-height: 30px;
+                        width: inputGroup.width - 40px - 20px -20px - 20px;
+                        height: 40px;
+                    }
+                }
+
+                Row {
+                    Text {
+                        text: @tr("Key:");
+                        vertical-alignment: center;
+                        //horizontal-alignment: center;
+                        horizontal-alignment: right;
+                        width: 40px;
+                    }
+                    keyInput := LineEdit {
+                        text: root.aeskey-input;
+                        placeholder-text: @tr("Please input key text as hex");
+                        font-size: 14px;
+                        // min-width: 200px;
+                        // min-height: 30px;
+                        width: inputGroup.width - 40px - 20px -20px - 20px;
+                        height: 40px;
+                    }
+                }
+
+                Row {
+                    Text {
+                        text: @tr("Ciphertext:");
+                        vertical-alignment: center;
+                        //horizontal-alignment: center;
+                        horizontal-alignment: right;
+                        width: 40px;
+                    }
+                    cipherInput := LineEdit {
+                        text: root.aescipher-input;
+                        placeholder-text: @tr("Add some text");
+                        font-size: 14px;
+                        // min-width: 200px;
+                        // min-height: 30px;
+                        width: inputGroup.width - 40px - 20px -20px - 20px;
+                        height: 40px;
+                        read-only: true;
+                    }
+                }
+            }
+        }
+
+        buttonGroup := GroupBox {
+            title: @tr("AES Button");
+            x: settingGroup.x;
+            y: inputGroup.y + inputGroup.height + 60px;
+
+            width: parent.width - leftblock-length - rightblock-length;
+            height: 60px;
+
+
+
+            HorizontalBox {
+                padding: 20px;
+                spacing: 20px;
+
+                Button {
+                    width: 100px;
+                    height: 40px;
+                    text: "Calculate";
+                    //clicked => { self.text = "Clicked"; }
+                    clicked => { root.handle-encrypt(); }
+                }
+                
+                Button {
+                    width: 100px;
+                    height: 40px;
+                    text: "Calculate";
+                    clicked => { self.text = "Clicked"; }
+                }
+            }
+        }
+    }
+}
+
+
+
+// style Button {
+//     background: @linear-gradient(0.5, #e0e0e0, #f0f0f0);
+//     border-radius: 4px;
+//     border-width: 1px;
+//     border-color: #a0a0a0;
+//     padding: 10px;
+// }
+
+// style Button:checked {
+//     background: @linear-gradient(0.5, #a0c4ff, #b6ccfe);
+// }

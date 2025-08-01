@@ -1,92 +1,55 @@
-use eframe::{egui, epi};
-use shared::{encrypt_message, decrypt_message, KeyRequest, KeyResponse};
-use reqwest::blocking::Client;
+#![windows_subsystem = "windows"]
 
-#[derive(Default)]
-struct MyApp {
-    key_id: String,
-    plaintext: String,
-    ciphertext: String,
-    decrypted: String,
-    key: Vec<u8>,
+
+
+use reqwest::Client;
+use shared::{KeyRequest, KeyResponse, encrypt_message, decrypt_message};
+use std::collections::HashMap;
+
+
+
+#[tokio::main]
+async fn main() -> Result<(), slint::PlatformError> {
+    env_logger::Builder::default()
+        .filter_level(if cfg!(debug_assertions) {
+            log::LevelFilter::Debug
+        } else {
+            log::LevelFilter::Info
+        })
+        .init();
+
+    let mut app_handler = AppHandler::new();
+    app_handler.init_ui();
+
+    let res = app_handler.run();
+    res
 }
 
-impl epi::App for MyApp {
-    fn name(&self) -> &str {
-        "Encrypt Tool with Remote Key"
-    }
-    fn update(&mut self, ctx: &egui::Context, _frame: &epi::Frame) {
-        egui::TopBottomPanel::top("header").show(ctx, |ui| {
-            ui.heading("Header - Rust Encrypt Client");
-        });
-        egui::TopBottomPanel::bottom("footer").show(ctx, |ui| {
-            ui.label("Footer © 2025 Rust Encrypt Demo");
-        });
-        egui::SidePanel::left("sidebar").show(ctx, |ui| {
-            ui.label("Sidebar");
-            if ui.button("获取密钥").clicked() {
-                let client = Client::new();
-                let resp = client.post("http://127.0.0.1:8080/get_key")
-                    .json(&KeyRequest { key_id: self.key_id.clone() })
-                    .send()
-                    .and_then(|r| r.json::<KeyResponse>());
-                if let Ok(r) = resp {
-                    self.key = r.key;
-                }
-            }
-            if ui.button("新建密钥").clicked() {
-                let client = Client::new();
-                let resp = client.post("http://127.0.0.1:8080/store_key")
-                    .json(&KeyRequest { key_id: self.key_id.clone() })
-                    .send()
-                    .and_then(|r| r.json::<KeyResponse>());
-                if let Ok(r) = resp {
-                    self.key = r.key;
-                }
-            }
-        });
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.label("密钥ID:");
-                ui.text_edit_singleline(&mut self.key_id);
-            });
-            ui.horizontal(|ui| {
-                ui.label("原文:");
-                ui.text_edit_singleline(&mut self.plaintext);
-            });
-            if ui.button("加密").clicked() {
-                if !self.key.is_empty() {
-                    if let Some(ct) = encrypt_message(&self.key, &self.plaintext) {
-                        self.ciphertext = base64::encode(ct);
-                    }
-                }
-            }
-            ui.horizontal(|ui| {
-                ui.label("密文:");
-                ui.text_edit_singleline(&mut self.ciphertext);
-            });
-            if ui.button("解密").clicked() {
-                if !self.key.is_empty() {
-                    if let Ok(ct) = base64::decode(&self.ciphertext) {
-                        if let Some(pt) = decrypt_message(&self.key, &ct) {
-                            self.decrypted = pt;
-                        }
-                    }
-                }
-            }
-            ui.horizontal(|ui| {
-                ui.label("解密结果:");
-                ui.text_edit_singleline(&mut self.decrypted);
-            });
-        });
-    }
+
+pub struct AppHandler {
+    display: DisplayController,
+    window: Option<AppWindow>,
 }
 
-fn main() {
-    let options = eframe::NativeOptions::default();
-    eframe::run_native(
-        "Rust Encrypt Client",
-        options,
-        Box::new(|_cc| Box::new(MyApp::default())),
-    );
+
+impl AppHandler {
+    pub fn new() -> Self {
+
+        Self {
+            display: DisplayController::new(&data_controller),
+
+            window: None,
+        }
+    }
+
+    pub fn init_ui(&mut self) {
+        let window = AppWindow::new().expect("Cannot create main window!");
+        
+        self.window = Some(window);
+    }
+
+    pub fn run(&self) -> Result<(), slint::PlatformError> {
+        let window = self.window.as_ref().expect("Cannot access main window!");
+        window.run()
+    }
 }

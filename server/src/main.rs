@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use shared::{KeyRequest, KeyResponse};
 use std::net::SocketAddr;
+use chacha20poly1305::aead::OsRng;
+use chacha20poly1305::{ChaCha20Poly1305, KeyInit};
 
 type KeyStore = Arc<Mutex<HashMap<String, Vec<u8>>>>;
 
@@ -12,7 +14,17 @@ async fn store_key(
 ) -> Json<KeyResponse> {
     let mut store = store.lock().unwrap();
     // 生产环境应校验权限
-    let key = rand::random::<[u8; 32]>().to_vec();
+    let key = match req.key_id.as_str() {
+        "AES-GCM" | "ChaCha20-Poly1305" => {
+            let key = ChaCha20Poly1305::generate_key(&mut OsRng);
+            key.to_vec()
+        },
+        _ => {
+            // 默认使用 32 字节随机密钥
+            rand::random::<[u8; 32]>().to_vec()
+        }
+    };
+    
     store.insert(req.key_id.clone(), key.clone());
     Json(KeyResponse { key })
 }
