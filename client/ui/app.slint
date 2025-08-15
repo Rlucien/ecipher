@@ -19,6 +19,14 @@ export component AppWindow inherits Window
     // feedback 函数
     //callback handle_encrypt() => HomePage.handle_encrypt();
 
+    callback close-window();
+    callback minimized-window(bool);
+    callback maximized-window(bool);
+    callback move-window(length, length);
+    callback mouse-down(int, int);
+    callback mouse-move(int, int);
+
+
     // 窗体宽度和高度
     preferred-width: 1000px;
     preferred-height: 600px;

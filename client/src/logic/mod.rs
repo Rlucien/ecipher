@@ -3,10 +3,6 @@ pub mod util;
 
 
 
-use crate::ui::{
-    AppWindow, 
-};
-
 
 
 pub fn init(ui: &AppWindow) {
@@ -15,3 +11,5 @@ pub fn init(ui: &AppWindow) {
         util::init(ui);
     }
 }
+
+

@@ -1,19 +1,18 @@
 
 
 
-
-use crate::ui::{
-    AppWindow, 
-    Util
-};
-
 use slint::ComponentHandle;
 
+
+
 pub fn init(ui: &AppWindow) {
+    // Initialize the global utility functions
     let ui_handle = ui.as_weak();
+
     ui.global::<Util>().on_hide_window(move || {
         _ = ui_handle.unwrap().hide();
     });
+
 
     let ui_handle = ui.as_weak();
     ui.global::<Util>().on_show_window(move || {
