@@ -1,0 +1,507 @@
+# ecipher 客户端界面架构设计
+
+## 1. 界面布局结构
+
+### 1.1 整体布局
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        菜单栏 (MenuBar)                          │
+├─────────────────┬───────────────────────────────────────────────┤
+│                 │                                               │
+│                 │                                               │
+│   侧边栏         │              主体内容区                        │
+│  (Sidebar)      │               (Body)                          │
+│                 │                                               │
+│  - 密钥管理      │         根据侧边栏选择显示:                     │
+│  - 密钥生成      │         - KeyManagePage                       │
+│  - 导入导出      │         - KeyGeneratePage                     │
+│  - 设置         │         - ImportExportPage                    │
+│  - 关于         │         - SettingsPage                        │
+│                 │         - AboutPage                           │
+│                 │                                               │
+├─────────────────┴───────────────────────────────────────────────┤
+│                      状态栏 (StatusBar)                          │
+│  连接状态 | 用户信息 | 操作提示 | 时间                              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## 2. 界面组件实现
+
+### 2.1 主应用布局 (app.rs)
+
+```rust
+use iced::{Application, Command, Element, Settings, Theme};
+use crate::state::AppState;
+use crate::ui::{MenuBar, Sidebar, StatusBar};
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ActivePage {
+    KeyManage,      // 密钥管理
+    KeyGenerate,    // 密钥生成
+    ImportExport,   // 导入导出
+    Settings,       // 设置
+    About,          // 关于
+}
+
+#[derive(Debug, Clone)]
+pub enum Message {
+    // 导航消息
+    NavigateToPage(ActivePage),
+    
+    // 菜单栏消息
+    MenuFileNew,
+    MenuFileOpen,
+    MenuFileSave,
+    MenuFileExit,
+    MenuEditCopy,
+    MenuEditPaste,
+    MenuViewRefresh,
+    MenuHelpAbout,
+    
+    // 侧边栏消息
+    SidebarItemSelected(ActivePage),
+    
+    // 页面消息
+    KeyManageMessage(crate::ui::pages::key_manage::Message),
+    KeyGenerateMessage(crate::ui::pages::key_generate::Message),
+    ImportExportMessage(crate::ui::pages::import_export::Message),
+    SettingsMessage(crate::ui::pages::settings::Message),
+    
+    // 状态栏消息
+    StatusUpdate(String),
+    ConnectionStatusChanged(bool),
+    
+    // 系统消息
+    Tick,
+    WindowResized,
+}
+
+pub struct EcipherApp {
+    pub state: AppState,
+    pub active_page: ActivePage,
+    pub sidebar_width: f32,
+    pub is_sidebar_collapsed: bool,
+}
+
+impl Application for EcipherApp {
+    type Executor = iced::executor::Default;
+    type Message = Message;
+    type Theme = Theme;
+    type Flags = ();
+
+    fn new(_flags: ()) -> (Self, Command<Message>) {
+        (
+            Self {
+                state: AppState::default(),
+                active_page: ActivePage::KeyManage,
+                sidebar_width: 250.0,
+                is_sidebar_collapsed: false,
+            },
+            Command::none(),
+        )
+    }
+
+    fn title(&self) -> String {
+        let page_title = match self.active_page {
+            ActivePage::KeyManage => "密钥管理",
+            ActivePage::KeyGenerate => "密钥生成",
+            ActivePage::ImportExport => "导入导出",
+            ActivePage::Settings => "设置",
+            ActivePage::About => "关于",
+        };
+        format!("ecipher - {}", page_title)
+    }
+
+    fn update(&mut self, message: Message) -> Command<Message> {
+        match message {
+            Message::NavigateToPage(page) => {
+                self.active_page = page;
+                Command::none()
+            }
+            Message::SidebarItemSelected(page) => {
+                self.active_page = page;
+                Command::perform(async {}, |_| Message::StatusUpdate(
+                    format!("切换到 {}", match page {
+                        ActivePage::KeyManage => "密钥管理",
+                        ActivePage::KeyGenerate => "密钥生成", 
+                        ActivePage::ImportExport => "导入导出",
+                        ActivePage::Settings => "设置",
+                        ActivePage::About => "关于",
+                    })
+                ))
+            }
+            Message::StatusUpdate(status) => {
+                self.state.status_message = Some(status);
+                Command::none()
+            }
+            // 处理其他消息...
+            _ => Command::none(),
+        }
+    }
+
+    fn view(&self) -> Element<Message> {
+        let menu_bar = MenuBar::view(&self.state);
+        
+        let sidebar = Sidebar::view(
+            &self.active_page, 
+            self.sidebar_width,
+            self.is_sidebar_collapsed
+        );
+        
+        let body = self.render_body();
+        
+        let status_bar = StatusBar::view(&self.state);
+        
+        iced::widget::column![
+            menu_bar,
+            iced::widget::row![
+                sidebar,
+                body,
+            ].height(iced::Length::Fill),
+            status_bar,
+        ]
+        .height(iced::Length::Fill)
+        .into()
+    }
+}
+
+impl EcipherApp {
+    fn render_body(&self) -> Element<Message> {
+        use crate::ui::pages::*;
+        
+        match self.active_page {
+            ActivePage::KeyManage => {
+                key_manage::KeyManagePage::view(&self.state)
+                    .map(Message::KeyManageMessage)
+            }
+            ActivePage::KeyGenerate => {
+                key_generate::KeyGeneratePage::view(&self.state)
+                    .map(Message::KeyGenerateMessage)
+            }
+            ActivePage::ImportExport => {
+                import_export::ImportExportPage::view(&self.state)
+                    .map(Message::ImportExportMessage)
+            }
+            ActivePage::Settings => {
+                settings::SettingsPage::view(&self.state)
+                    .map(Message::SettingsMessage)
+            }
+            ActivePage::About => {
+                about::AboutPage::view(&self.state)
+            }
+        }
+    }
+}
+```
+
+### 2.2 菜单栏组件 (ui/components/menu_bar.rs)
+
+```rust
+use iced::{
+    widget::{button, row, text, Space},
+    Element, Length, Alignment,
+};
+use crate::{Message, state::AppState};
+
+pub struct MenuBar;
+
+#[derive(Debug, Clone)]
+pub enum MenuAction {
+    File(FileAction),
+    Edit(EditAction),
+    View(ViewAction),
+    Help(HelpAction),
+}
+
+#[derive(Debug, Clone)]
+pub enum FileAction {
+    New,
+    Open,
+    Save,
+    Export,
+    Exit,
+}
+
+#[derive(Debug, Clone)]
+pub enum EditAction {
+    Copy,
+    Paste,
+    Delete,
+    SelectAll,
+}
+
+#[derive(Debug, Clone)]
+pub enum ViewAction {
+    Refresh,
+    ToggleSidebar,
+    Fullscreen,
+}
+
+#[derive(Debug, Clone)]
+pub enum HelpAction {
+    Documentation,
+    About,
+}
+
+impl MenuBar {
+    pub fn view(state: &AppState) -> Element<Message> {
+        let file_menu = Self::create_dropdown_menu("文件", vec![
+            ("新建", Message::MenuFileNew),
+            ("打开", Message::MenuFileOpen),
+            ("保存", Message::MenuFileSave),
+            ("导出", Message::MenuFileExport),
+            ("退出", Message::MenuFileExit),
+        ]);
+        
+        let edit_menu = Self::create_dropdown_menu("编辑", vec![
+            ("复制", Message::MenuEditCopy),
+            ("粘贴", Message::MenuEditPaste),
+            ("删除", Message::MenuEditDelete),
+            ("全选", Message::MenuEditSelectAll),
+        ]);
+        
+        let view_menu = Self::create_dropdown_menu("视图", vec![
+            ("刷新", Message::MenuViewRefresh),
+            ("切换侧边栏", Message::MenuViewToggleSidebar),
+            ("全屏", Message::MenuViewFullscreen),
+        ]);
+        
+        let help_menu = Self::create_dropdown_menu("帮助", vec![
+            ("文档", Message::MenuHelpDocumentation),
+            ("关于", Message::MenuHelpAbout),
+        ]);
+        
+        let menu_row = row![
+            file_menu,
+            edit_menu,
+            view_menu,
+            Space::with_width(Length::Fill),
+            // 右侧显示用户信息
+            Self::user_info_section(state),
+            help_menu,
+        ]
+        .spacing(5)
+        .align_items(Alignment::Center)
+        .padding([8, 12]);
+        
+        iced::widget::container(menu_row)
+            .width(Length::Fill)
+            .style(iced::theme::Container::Custom(Box::new(MenuBarStyle)))
+            .into()
+    }
+    
+    fn create_dropdown_menu(label: &str, items: Vec<(&str, Message)>) -> Element<Message> {
+        // 简化版本，实际应该使用下拉菜单组件
+        button(text(label))
+            .style(iced::theme::Button::Text)
+            .on_press(items.first().map(|(_, msg)| msg.clone()).unwrap_or(Message::MenuFileNew))
+            .into()
+    }
+    
+    fn user_info_section(state: &AppState) -> Element<Message> {
+        if let Some(ref user) = state.user {
+            row![
+                text("用户:").size(12),
+                text(&user.display_name).size(12),
+            ]
+            .spacing(5)
+            .align_items(Alignment::Center)
+            .into()
+        } else {
+            text("未登录").size(12).into()
+        }
+    }
+}
+
+// 菜单栏样式
+struct MenuBarStyle;
+
+impl iced::widget::container::StyleSheet for MenuBarStyle {
+    type Style = iced::Theme;
+    
+    fn appearance(&self, _style: &Self::Style) -> iced::widget::container::Appearance {
+        iced::widget::container::Appearance {
+            background: Some(iced::Background::Color(iced::Color::from_rgb(0.95, 0.95, 0.95))),
+            border: iced::Border {
+                width: 0.0,
+                color: iced::Color::TRANSPARENT,
+                radius: 0.0.into(),
+            },
+            text_color: Some(iced::Color::BLACK),
+            shadow: iced::Shadow::default(),
+        }
+    }
+}
+```
+
+### 2.3 侧边栏组件 (ui/components/sidebar.rs)
+
+```rust
+use iced::{
+    widget::{button, column, container, row, text, Space, svg},
+    Element, Length, Alignment,
+};
+use crate::{Message, ActivePage};
+
+pub struct Sidebar;
+
+#[derive(Debug, Clone)]
+pub struct SidebarItem {
+    pub page: ActivePage,
+    pub label: &'static str,
+    pub icon: &'static str, // SVG 图标路径或内容
+    pub description: &'static str,
+}
+
+impl Sidebar {
+    const SIDEBAR_ITEMS: &'static [SidebarItem] = &[
+        SidebarItem {
+            page: ActivePage::KeyManage,
+            label: "密钥管理",
+            icon: "🔐",
+            description: "管理和查看所有密钥",
+        },
+        SidebarItem {
+            page: ActivePage::KeyGenerate,
+            label: "密钥生成",
+            icon: "🎲",
+            description: "生成新的安全密钥",
+        },
+        SidebarItem {
+            page: ActivePage::ImportExport,
+            label: "导入导出",
+            icon: "📤",
+            description: "导入和导出密钥文件",
+        },
+        SidebarItem {
+            page: ActivePage::Settings,
+            label: "设置",
+            icon: "⚙️",
+            description: "应用程序设置",
+        },
+        SidebarItem {
+            page: ActivePage::About,
+            label: "关于",
+            icon: "ℹ️",
+            description: "关于 ecipher",
+        },
+    ];
+    
+    pub fn view(
+        active_page: &ActivePage, 
+        width: f32, 
+        is_collapsed: bool
+    ) -> Element<Message> {
+        let mut sidebar_content = column![]
+            .spacing(5)
+            .padding(10);
+        
+        // 标题区域
+        let title_section = if is_collapsed {
+            container(text("E").size(20).horizontal_alignment(iced::alignment::Horizontal::Center))
+        } else {
+            container(
+                row![
+                    text("ecipher").size(18),
+                    Space::with_width(Length::Fill),
+                    button("≡")
+                        .style(iced::theme::Button::Text)
+                        .on_press(Message::MenuViewToggleSidebar)
+                ]
+                .align_items(Alignment::Center)
+            )
+        };
+        
+        sidebar_content = sidebar_content.push(title_section);
+        sidebar_content = sidebar_content.push(Space::with_height(20));
+        
+        // 导航项目
+        for item in Self::SIDEBAR_ITEMS {
+            let is_active = *active_page == item.page;
+            
+            let nav_item = if is_collapsed {
+                // 折叠状态：只显示图标
+                button(
+                    container(text(item.icon).size(20))
+                        .width(Length::Fill)
+                        .center_x()
+                )
+                .width(Length::Fill)
+                .style(if is_active {
+                    iced::theme::Button::Primary
+                } else {
+                    iced::theme::Button::Secondary
+                })
+                .on_press(Message::SidebarItemSelected(item.page.clone()))
+            } else {
+                // 展开状态：图标 + 文字
+                button(
+                    row![
+                        container(text(item.icon).size(16))
+                            .width(30)
+                            .center_x(),
+                        column![
+                            text(item.label).size(14),
+                            text(item.description).size(10)
+                                .style(iced::theme::Text::Color(
+                                    iced::Color::from_rgb(0.6, 0.6, 0.6)
+                                ))
+                        ]
+                        .spacing(2)
+                    ]
+                    .align_items(Alignment::Center)
+                    .spacing(10)
+                )
+                .width(Length::Fill)
+                .padding([10, 15])
+                .style(if is_active {
+                    iced::theme::Button::Primary
+                } else {
+                    iced::theme::Button::Secondary
+                })
+                .on_press(Message::SidebarItemSelected(item.page.clone()))
+            };
+            
+            sidebar_content = sidebar_content.push(nav_item);
+        }
+        
+        // 底部区域
+        sidebar_content = sidebar_content.push(Space::with_height(Length::Fill));
+        
+        if !is_collapsed {
+            let footer = column![
+                button("折叠侧边栏")
+                    .style(iced::theme::Button::Text)
+                    .on_press(Message::MenuViewToggleSidebar),
+            ]
+            .spacing(5);
+            
+            sidebar_content = sidebar_content.push(footer);
+        }
+        
+        container(sidebar_content)
+            .width(if is_collapsed { 60 } else { width })
+            .height(Length::Fill)
+            .style(iced::theme::Container::Custom(Box::new(SidebarStyle)))
+            .into()
+    }
+}
+
+// 侧边栏样式
+struct SidebarStyle;
+
+impl iced::widget::container::StyleSheet for SidebarStyle {
+    type Style = iced::Theme;
+    
+    fn appearance(&self, _style: &Self::Style) -> iced::widget::container::Appearance {
+        iced::widget::container::Appearance {
+            background: Some(iced::Background::Color(iced::Color::from_rgb(0.98, 0.98, 0.98))),
+            border: iced::Border {
+                width: 1.0,
+                color: iced::Color::from_rgb(0.9, 0.9, 0.9),
+                radius: 0.0.into(),
+            },
+            text_color: Some(iced::Color::BLACK),
+            shadow: iced::Shadow {
+                color: iced::Color::from_r

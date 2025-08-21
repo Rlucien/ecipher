@@ -1,7 +1,6 @@
 
-export global Icons {
-    out property <image> logo: @image_url("./icons/safe.png");
-
+pub var Icons {
+    //out property <image> logo: @image_url("./icons/safe.png");
     // out property <image> add: @image_url("../assets/icons/add.svg");
     // out property <image> arrow_back: @image_url("../assets/icons/arrow_back.svg");
     // out property <image> arrow_downward: @image_url("../assets/icons/arrow_downward.svg");
