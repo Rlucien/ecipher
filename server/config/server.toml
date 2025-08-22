@@ -1,0 +1,43 @@
+[server]
+# 服务器监听地址和端口
+host = "127.0.0.1"
+port = 3000
+
+# 工作线程数量
+workers = 4
+
+# 最大连接数
+max_connections = 100
+
+# 超时设置（秒）
+read_timeout = 30
+write_timeout = 30
+keepalive_timeout = 60
+
+[database]
+# 数据库连接URL
+url = "mysql://user:password@localhost:3306/key_management"
+
+# 数据库连接池设置
+max_pool_size = 10
+min_pool_size = 2
+connect_timeout = 10
+idle_timeout = 300
+
+# SSL配置
+ssl_mode = "VERIFY_IDENTITY"
+ssl_ca = "path/to/ca-cert.pem"
+ssl_cert = "path/to/client-cert.pem"
+ssl_key = "path/to/client-key.pem"
+
+[security]
+# 加密配置
+encryption_algorithm = "AES-256-GCM"
+key_derivation_iterations = 100000
+
+# JWT配置（如果使用）
+[jwt]
+secret_key = "your-jwt-secret-key-here"
+expiration_minutes = 60
+issuer = "ecipher-server"
+audience = "ecipher-client"

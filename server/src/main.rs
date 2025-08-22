@@ -1,6 +1,8 @@
-use axum::{Router, Server};
+use axum::{Router, middleware::from_fn};
+use axum::serve;
 use dotenv::dotenv;
 use std::net::SocketAddr;
+use tokio::net::TcpListener;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 mod api;
@@ -17,7 +19,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // 初始化日志
     tracing_subscriber::registry()
-        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .with(EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| "info".into()))
         .with(fmt::layer())
         .init();
     
@@ -26,15 +29,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // 构建路由
     let app = Router::new()
-        .merge(api::keys::routes())
-        .with_state(db_pool);
+        .merge(api::key::routes())
+        .layer(from_fn(utils::middleware::cors_middleware))
+        .layer(utils::middleware::trace_layer())
+        .with_state(db_pool.clone());
     
     // 启动服务器
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     tracing::info!("Server running on http://{}", addr);
     
-    Server::bind(&addr)
-        .serve(app.into_make_service())
+    let listener = TcpListener::bind(&addr).await?;
+    serve(listener, app.into_make_service())
         .await?;
     
     Ok(())

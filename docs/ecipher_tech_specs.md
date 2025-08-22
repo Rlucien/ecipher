@@ -18,7 +18,7 @@
 ### 2.1 High-Level Architecture
 
 ```
-┌─────────────────┐    HTTPS/TLS    ┌─────────────────┐
+┌─────────────────┐    HTTPS/TLS     ┌─────────────────┐
 │  Client (GUI)   │ ◄──────────────► │  Server (API)   │
 │   Windows       │                  │     Linux       │
 │                 │                  │                 │

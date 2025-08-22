@@ -1,6 +1,6 @@
-use super::super::model::key::{CreateKeyRequest, Key, KeyResponse};
-use super::super::repository;
-use super::super::utils::encryption::{decrypt_data, encrypt_data};
+use crate::model::key::{CreateKeyRequest, Key, KeyResponse};
+use crate::repository;
+use crate::utils::encryption::encrypt_data;
 use sqlx::MySqlPool;
 use std::error::Error;
 

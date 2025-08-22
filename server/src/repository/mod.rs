@@ -1,4 +1,4 @@
-use super::super::model::key::Key;
+use crate::model::key::Key;
 use sqlx::{MySqlPool, Result};
 
 pub async fn create_key(pool: &MySqlPool, key: &Key) -> Result<u64> {

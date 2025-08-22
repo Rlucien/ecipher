@@ -5,8 +5,12 @@ edition = "2021"
 
 [dependencies]
 
+iced.workspace = true
+iced_aw.workspace = true
+
 shared = { path = "../shared" }  # 路径依赖共享库
 serde.workspace = true           # 引用工作区共享依赖
 tokio.workspace = true
 sqlx.workspace = true
+
 
