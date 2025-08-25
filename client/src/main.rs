@@ -17,26 +17,29 @@
 **************************************************************************************************/
 #![windows_subsystem = "windows"]
 
-
-/**************************************************************************************************
- * Import the slint UI module
-**************************************************************************************************/
-
-
+mod app;
+mod logic;
 
 /**************************************************************************************************
  * Import External Packages
 **************************************************************************************************/
+use iced::window::{icon, Settings};
 use reqwest::Client;
-use std::collections::HashMap;
 
-use std::rc::Rc;
+
+
 
 
 /**************************************************************************************************
  * Import Internal Packages
 **************************************************************************************************/
 use shared::{KeyRequest, KeyResponse, encrypt_message, decrypt_message};
+
+
+pub const WINDOW_INITIAL_WIDTH: f32 = 1200.0;
+pub const WINDOW_INITIAL_HEIGHT: f32 = 600.0;
+pub const WINDOW_MIN_WIDTH: f32 = 800.0;
+pub const WINDOW_MIN_HEIGHT: f32 = 480.0;
 
 
 /**************************************************************************************************
@@ -48,58 +51,20 @@ use shared::{KeyRequest, KeyResponse, encrypt_message, decrypt_message};
  * Description: 程序的主函数，初始化应用程序并设置窗口属性
 **************************************************************************************************/
 #[tokio::main]
-async fn main() -> Result<(), slint::PlatformError> {
-    
-    //log::debug!("start...");
-
-    ui_before().await;
-
-    let mut app_handler = AppWindow::new().unwrap();
-
-    ui_after(&app_handler);
-
-    app_handler.run().unwrap();
-
-    // log::debug!("exit...");
-    res
+async fn main() -> iced::Result {
+    application(App::title, App::update, App::view)
+        .window(window::Settings {
+            size: Size::new(WINDOW_INITIAL_WIDTH, WINDOW_INITIAL_HEIGHT),
+            min_size: Some(Size::new(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)),
+            resizable: true,
+            visible: true,
+            icon: window::icon::from_file_data(WINDOW_ICON, None).ok(),
+            ..window::Settings::default()
+        })
+        .theme(App::theme)
+        .centered()
+        // .run_with(App::new())
+        // .map_err(|e| e.into());
+        .run()
 }
-
-
-
-
-#[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
-async fn ui_before() {
-
-    // initialize the logger
-    // todo
-
-    // initialize the configuration
-    // todo
-
-    // initialize the database if the feature is enabled
-    // todo
-}
-
-
-
-async fn ui_init() {
-
-    // initialize the logger
-    // todo
-
-    // initialize the configuration
-    // todo
-
-    // initialize the database if the feature is enabled
-    // todo
-}
-
-
-
-fn ui_after(ui: &AppWindow) {
-    logic::init(ui);
-}
-
-
-
 

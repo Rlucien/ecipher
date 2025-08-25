@@ -1,16 +1,45 @@
+#───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 [package]
-name = "client"
+name = "ecipher-client"
 version = "0.1.0"
-edition = "2021"
+authors = ["Lucien <ldh0sky@163.com>"]
+edition = "2024"
+description = "GUI Client application"
+homepage = "https://loyss.cn"
+license = "Apache-2.0"
+readme = "README.md"
+repository = "https://gitlab.com/rlucien1/guardian.git"
 
+#───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 [dependencies]
-
 iced.workspace = true
 iced_aw.workspace = true
-
-shared = { path = "../shared" }  # 路径依赖共享库
-serde.workspace = true           # 引用工作区共享依赖
 tokio.workspace = true
-sqlx.workspace = true
+serde.workspace = true
+reqwest.workspace = true
+
+# 路径依赖共享库
+shared = { path = "../shared" }
+
+#───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# [target.'cfg(windows)'.build-dependencies]
+# winres = "0.1.12"
+
+#───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# [[bin]]
+# name = "guardian"
+# path = "src/main.rs"
 
 
+#───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# [profile.dev]
+# opt-level = 0
+
+
+#───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# [profile.release]
+# opt-level = 3
+# lto = true
+# strip = true
+
+#───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
